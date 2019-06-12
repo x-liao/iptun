@@ -225,6 +225,7 @@ options:
 		for k,v in inte_dic.items():
 			if v == int(inte_num):
 				self.config['inte'] = k
+		print('选择的网卡ip:',get_ip(self.config['inte']))
 		self.config['remote'] = input('远程ip：')
 		self.config['tun_ip'] = input('本地隧道ip：')
 		self.config['mtu'] = input('设置MTU：')
