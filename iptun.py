@@ -18,7 +18,6 @@ class Sql(object):
 		self.db_name = db_name
 
 	def add(self, config):  # 添加隧道
-		print(config)
 		sql = """
 		INSERT INTO tun(name,
 		type,
@@ -69,10 +68,11 @@ class Sql(object):
 		except Exception as e:
 			print("创建数据库失败", e)
 
-	def select(self):  # 查询路由，在列出隧道时用到
+	def select(self,sql):  # 查询路由，在列出隧道时用到
 		conn = sqlite3.connect(db_name)
 		c = conn.cursor()
-		c.execute("SELECT * FROM tun;")
+		c.execute(sql)
+		conn.commit()
 		data = c.fetchall()
 		conn.close()
 		return data
@@ -90,7 +90,6 @@ class Sql(object):
 		try:
 			conn = sqlite3.connect(self.db_name)
 			sql = "DELETE from tun where id=%s;" % (id)
-			print(sql)
 			c = conn.cursor()
 			c.execute(sql)
 			conn.commit()
@@ -105,7 +104,7 @@ def show_table():  # 列出隧道表格
 						 "remote", "tun_ip", "tun_gw", "vlan", "mtu",
 											 "port", "note"])
 	sq = Sql(db_name)
-	data = sq.select()
+	data = sq.select("SELECT * FROM tun;")
 	for x in data:
 		list(x)
 		table.add_row(x)
@@ -119,22 +118,49 @@ class Shell(object):
 		super(Shell, self).__init__()
 		self.config = {}
 
+	def termx(self):
+		print(
+			'''
+options:
+	add
+	del
+	restore
+			'''
+		)
+		
+
 	def print_help(self):
 		print(
 			'''
 options:
 	-a --add [name]             添加
 	-d --del [id]               删除
+	-t --type [gre|ipip]        隧道类型
+	-i --inte [inte]            网卡名
 	-p --port [port]            端口
 	-r --remote [ip]            远程主机
+	-c --tun_ip [ip]            设置隧道本机ip
+	-u --mtu [mtu]              MTU 默认1450
+	-n --note [txt]             备注
+	-h --help                   帮助
+	-l --list                   显示隧道
+	-s --restore                恢复隧道
 
+添加隧道:
+	iptun -a tun01 -t gre -i ens37 -r 100.1.2.3 -c 10.1.1.1
+
+删除隧道:
+	iptun -d 1
+
+恢复隧道:
+	iptun -s [1|tun01]
 			'''
 		)
 
 	def get_config(self):
-		shortopts = 'lha:d:t:i:r:c:u:p:v:n:'
+		shortopts = 'lha:d:t:i:r:c:u:p:v:n:s:'
 		longopts = ['add=', 'del=', 'type=', 'inte=',
-					'remote=', 'mtu=', 'vlan=', 'port=', 'note=', 'list', 'help']
+					'remote=', 'mtu=', 'vlan=', 'port=', 'note=', 'list', 'help', 'restore=']
 
 		try:
 			optlist, args = getopt.getopt(sys.argv[1:], shortopts, longopts)
@@ -146,7 +172,7 @@ options:
 
 				if o in ("-d", '--del'):
 					self.config['opt'] = 'del'
-					self.config['id'] = v
+					self.config['del'] = v
 
 				if o in ("-t", '--type'):
 					self.config['type'] = v
@@ -174,6 +200,11 @@ options:
 
 				if o in ('-l', '--list'):
 					self.config['opt'] = "list"
+
+				if o in ('-s', '--restore'):
+					self.config['opt'] in "restore"
+					self.config['restore'] = v
+
 				if o in ('-h', '--help'):
 					self.config['help'] = "help"
 					self.print_help()
@@ -185,7 +216,7 @@ options:
 			sys.exit(2)
 
 		if not self.config:
-			self.print_help()
+			self.termx()
 			self.config = self.loop()
 
 		return self.config
@@ -197,7 +228,9 @@ options:
 				return self.add_config()
 			elif cmd == 'del':
 				return self.del_config()
-			elif cmd == 'list' or cmd == 'ls':
+			elif cmd in ('restore','res') :
+				return self.restore_config()
+			elif cmd in ('list','ls'):
 				print(show_table())
 			elif cmd == 'exit':
 				exit(0)
@@ -247,6 +280,11 @@ options:
 		self.config['id'] = int(input('删除的ID：'))
 		return self.config
 
+	def restore_config(self):
+		self.config['opt'] = 'restore'
+		print(show_table())
+		self.config['id'] = int(input('需要恢复的ID：'))
+		return self.config
 
 def get_ip(inte):
 	cmd = "ip addr | grep -E %s | grep inet | awk -F '/' '{print $1}' | awk '{print $2}'" % inte
@@ -282,12 +320,19 @@ class Tun(object):
 
 	def create(self, config):
 		config['local_ip'] = get_ip(config['inte'])
-		os.system('ip tunnel %s %s mode %s remote %s local %s' % (config['opt'],
-					config['name'], config['type'], config['remote'], config['local_ip']))
+		os.system('ip tunnel add %s mode %s remote %s local %s' % (config['name'], 
+			config['type'], config['remote'], config['local_ip']))
 
 		os.system('ip link set %s up mtu %d' % (config['name'], config['mtu']))
 		os.system('ip addr add %s/24 dev %s' %
 				  (config['tun_ip'], config['name']))
+
+	def restore(self,data):
+		for x in data:
+			print(x)
+			config = {}
+			config['id'],config['name'],config['type'],config['inte'],config['remote'],config['tun_ip'],config['tun_gw'],config['vlan'],config['mtu'],config['port'],config['note'] = x
+			self.create(config)
 
 	def delete(self, name):
 		print('ip tunnel del %s' %name)
@@ -338,9 +383,42 @@ def main():
 
 	elif config['opt'] == "del":
 		try:
-			name = db.select_id('name', config['id'])[0][0]
-			tun.delete(name)
-			db.delete(config['id'])
+			config['id'] = int(config['del'])
+			is_id = True
+		except:
+			is_id = False
+			config['name'] = config['del']
+
+		try:
+			if is_id:
+				name = db.select_id('name', config['id'])[0][0]
+				tun.delete(name)
+				db.delete(config['id'])
+			else:
+				tun.delete(config['name'])
+				data = db.select("DELETE FROM tun WHERE NAME LIKE '%s'"%config['name'])
+		except Exception as e:
+			print('ID不存在')
+
+	elif config['opt'] == "restore":
+		try:
+			config['id'] = int(config['restore'])
+			is_id = True
+		except:
+			is_id = False
+			config['name'] = config['restore']
+
+		try:
+			if is_id and config['id'] == 0:
+				data = db.select("SELECT * FROM tun;")
+			elif is_id and type(config['id']) == type(0):
+				data = db.select_id('*', config['id'])
+			else:
+				data = db.select("SELECT * FROM tun WHERE NAME LIKE '%s'"%config['name'])
+			if data:
+				tun.restore(data)
+			else:
+				print('ID不存在')
 		except Exception as e:
 			print('ID不存在')
 
