@@ -6,7 +6,9 @@ import sqlite3
 import subprocess
 from prettytable import PrettyTable
 
-db_name = "tun.db"
+PATH = os.path.split(os.path.realpath(__file__))[0]
+db_name = PATH + "/tun.db"
+
 
 class Sql(object):
 	"""docstring for Sql"""
