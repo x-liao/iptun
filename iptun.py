@@ -277,13 +277,13 @@ options:
 	def del_config(self):
 		self.config['opt'] = 'del'
 		print(show_table())
-		self.config['id'] = int(input('删除的ID：'))
+		self.config['del'] = int(input('删除的ID：'))
 		return self.config
 
 	def restore_config(self):
 		self.config['opt'] = 'restore'
 		print(show_table())
-		self.config['id'] = int(input('需要恢复的ID：'))
+		self.config['restore'] = int(input('需要恢复的ID：'))
 		return self.config
 
 def get_ip(inte):
