@@ -245,20 +245,21 @@ options:
 		
 		type_num = input('隧道类型(1 2)：')
 		if type_num == '2':
-			self.config['type'] == 'ipip'
+			self.config['type'] = 'ipip'
+			print('    选择ipip')
 		else:
 			self.config['type'] = 'gre'
-		print('选择gre')
+			print('    选择gre')
 		self.config['name'] = input('隧道名称：')
 		inte_dic = list_inte()
 		inte_num = input('选择网卡：')
 		if not inte_num:
-			print('未选择网卡')
+			print('    未选择网卡')
 			exit()
 		for k,v in inte_dic.items():
 			if v == int(inte_num):
 				self.config['inte'] = k
-		print('选择的网卡ip:',get_ip(self.config['inte']))
+		print('    选择的网卡ip:',get_ip(self.config['inte']))
 		self.config['remote'] = input('远程ip：')
 		self.config['tun_ip'] = input('本地隧道ip：')
 		self.config['mtu'] = input('设置MTU：')
@@ -266,7 +267,7 @@ options:
 			try:
 				self.config['mtu'] = int(self.config['mtu'])
 			except Exception as e:
-				print('mtu必须是数字')
+				print('    mtu必须是数字')
 				self.config.pop('mtu')
 		else:
 			self.config.pop('mtu')
@@ -305,6 +306,8 @@ def list_inte():
 	i=0
 	inte_dic = {}
 	for inte in inte_list:
+		if inte == 'lo':
+			inte = 'lo:'
 		inte_dic[inte] = i
 		ip = get_ip(inte)
 		print("%d: %s\t\t\t%s"%(i,inte,ip))
@@ -359,7 +362,7 @@ def check_key(config):
 		if x not in config.keys():
 			if x == 'tun_gw':
 				config['tun_gw'] = ''
-			print('缺少参数', x)
+			print('    缺少参数', x)
 			exit()
 	return config
 
@@ -398,7 +401,7 @@ def main():
 				tun.delete(config['name'])
 				data = db.select("DELETE FROM tun WHERE NAME LIKE '%s'"%config['name'])
 		except Exception as e:
-			print('ID不存在')
+			print('    ID不存在')
 
 	elif config['opt'] == "restore":
 		try:
