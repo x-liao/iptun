@@ -202,7 +202,7 @@ options:
 					self.config['opt'] = "list"
 
 				if o in ('-s', '--restore'):
-					self.config['opt'] in "restore"
+					self.config['opt'] = "restore"
 					self.config['restore'] = v
 
 				if o in ('-h', '--help'):
