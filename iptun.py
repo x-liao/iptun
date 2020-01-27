@@ -278,13 +278,13 @@ options:
 	def del_config(self):
 		self.config['opt'] = 'del'
 		print(show_table())
-		self.config['del'] = int(input('删除的ID：'))
+		self.config['del'] = input('删除的ID：')
 		return self.config
 
 	def restore_config(self):
 		self.config['opt'] = 'restore'
 		print(show_table())
-		self.config['restore'] = int(input('需要恢复的ID：'))
+		self.config['restore'] = input('需要恢复的ID：')
 		return self.config
 
 def get_ip(inte):
@@ -343,8 +343,8 @@ class Tun(object):
 
 
 def check_key(config):
-	par = ('name', 'type', 'inte', 'remote', 'tun_ip', 'tun_gw')  # 必须参数
-	par1 = ('tun_gw', 'vlan', 'mtu', 'port', 'note')  # 可选参数，如果空，为默认值
+	par = ('name', 'inte', 'remote', 'tun_ip', 'tun_gw')  # 必须参数
+	par1 = ('tun_gw', 'vlan', 'mtu', 'port', 'note', 'type')  # 可选参数，如果空，为默认值
 	for x in par1:
 		if x not in config.keys():
 			if x == 'tun_gw':
@@ -357,6 +357,8 @@ def check_key(config):
 				config['port'] = 0
 			if x == 'note':
 				config['note'] = ''
+			if x == 'type':
+				config['type'] = 'gre'
 
 	for x in par:
 		if x not in config.keys():
